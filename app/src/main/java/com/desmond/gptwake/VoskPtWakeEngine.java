@@ -35,11 +35,13 @@ final class VoskPtWakeEngine implements AutoCloseable {
 
     synchronized void newStream() throws Exception {
         releaseStream();
-        // Do NOT use ["charles","[unk]"]; that grammar forced a false
-        // "Charles" decision for many unrelated sounds.
-        recognizer = new Recognizer(model, 16000f);
+        // Calibrated Portuguese grammar. Competing common lookalike words
+        // prevent forcing unrelated speech into "charles" (unlike the unsafe
+        // two-token [charles,unk] grammar). Only FIRST word in a FINAL segment
+        // with sufficient word confidence can trigger the assistant.
+        recognizer = new Recognizer(model, 16000f, "[\"charles\",\"eles\",\"chaves\",\"alice\",\"tchau\",\"[unk]\"]");
         recognizer.setWords(true);
-        L.i("VOSK_PT_SAFE_STREAM_NEW grammar=unrestricted decision=final_only threshold=0.55 first_word");
+        L.i("VOSK_PT_SAFE_STREAM_NEW grammar=calibrated_competitors decision=final_only threshold=0.55 first_word");
     }
 
     synchronized String accept(float[] normalized, int sampleRate) {
