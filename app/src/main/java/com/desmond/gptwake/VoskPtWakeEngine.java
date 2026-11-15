@@ -18,7 +18,7 @@ import java.util.Locale;
  * No microphone audio or unrelated transcriptions are stored/logged.
  */
 final class VoskPtWakeEngine implements AutoCloseable {
-    private static final double MIN_WORD_CONFIDENCE = 0.68;
+    private static final double MIN_WORD_CONFIDENCE = 0.55;
     private final Model model;
     private Recognizer recognizer;
 
@@ -39,7 +39,7 @@ final class VoskPtWakeEngine implements AutoCloseable {
         // "Charles" decision for many unrelated sounds.
         recognizer = new Recognizer(model, 16000f);
         recognizer.setWords(true);
-        L.i("VOSK_PT_SAFE_STREAM_NEW grammar=unrestricted decision=final_only threshold=0.68");
+        L.i("VOSK_PT_SAFE_STREAM_NEW grammar=unrestricted decision=final_only threshold=0.55 first_word");
     }
 
     synchronized String accept(float[] normalized, int sampleRate) {
@@ -53,15 +53,24 @@ final class VoskPtWakeEngine implements AutoCloseable {
             }
             JSONObject finalResult = new JSONObject(recognizer.getResult());
             String words = finalResult.optString("text", "").trim().toLowerCase(Locale.ROOT);
-            if (!"charles".equals(words)) return null;
+            // Wake phrase may be followed by an immediate request, e.g.
+            // "Charles, envia oi para o Higor". Only the FIRST word counts.
+            // Do not trigger if "Charles" appears later in someone else's speech.
+            if (words.isEmpty()) return null;
+            String first = words.split("\\s+", 2)[0];
+            if (!"charles".equals(first)) return null;
 
             JSONArray details = finalResult.optJSONArray("result");
-            if (details == null || details.length() != 1) {
-                L.i("VOSK_PT_SAFE_REJECT reason=no_single_word_confidence");
+            if (details == null || details.length() < 1) {
+                L.i("VOSK_PT_SAFE_REJECT reason=no_first_word_confidence");
                 return null;
             }
             JSONObject word = details.optJSONObject(0);
-            double confidence = word == null ? 0 : word.optDouble("conf", 0);
+            if (word == null || !"charles".equalsIgnoreCase(word.optString("word", ""))) {
+                L.i("VOSK_PT_SAFE_REJECT reason=first_word_mismatch");
+                return null;
+            }
+            double confidence = word.optDouble("conf", 0);
             if (!Double.isFinite(confidence) || confidence < MIN_WORD_CONFIDENCE) {
                 L.i("VOSK_PT_SAFE_REJECT reason=low_confidence conf=" +
                         String.format(Locale.US, "%.2f", confidence));
