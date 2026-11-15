@@ -8,7 +8,7 @@ import org.vosk.Recognizer;
 /** Local, Portuguese speech trigger. Only the exact word Charles wakes the assistant.
  * Microphone audio stays in the Android process and is never logged or uploaded. */
 final class VoskPtWakeEngine implements AutoCloseable {
-    private static final String GRAMMAR = "[\\"charles\\",\\"[unk]\\"]";
+    private static final String GRAMMAR = "[\"charles\",\"[unk]\"]";
     private final Model model;
     private Recognizer recognizer;
     private String previousPartial = "";
