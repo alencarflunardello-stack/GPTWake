@@ -308,10 +308,16 @@ public final class WakeController implements AudioProbe.WakeListener, AudioState
         }
         set(State.CHATGPT_LAUNCHING);
         launchStartedAt = SystemClock.elapsedRealtime();
-        deeplinkTried = false;
-        L.i("CHATGPT_LAUNCH_ATTEMPT route=AssistantActivity");
-        GptLauncher.launchDirect(ctx);
-        later(this::checkVoiceConfirm, VOICE_CONFIRM_MS);
+        // The current ChatGPT AssistantActivity is not exported. Its failure was
+        // causing a reproducible five-second delay on the user's Galaxy S23 Ultra.
+        // Use the public, package-scoped voice deep link immediately instead.
+        deeplinkTried = true;
+        L.i("CHATGPT_LAUNCH_ATTEMPT route=deeplink_fast");
+        if (!GptLauncher.launchDeeplink(ctx)) {
+            L.i("CHATGPT_DEEPLINK_FAST_FAIL trying exported assistant only");
+            GptLauncher.launchDirect(ctx);
+        }
+        later(this::checkVoiceConfirm, DEEPLINK_CONFIRM_MS);
     }
 
     private void checkVoiceConfirm() {
