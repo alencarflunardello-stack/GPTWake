@@ -135,8 +135,15 @@ public final class KwsEngine {
         String line = customKeywordLine;
         if (line == null || line.trim().isEmpty()) line = WakeWordStore.DEFAULT_LINE;
         // Per-keyword overrides take effect without reloading the resident ONNX models.
-        int label = line.indexOf(" @");
         String parameters = " :" + keywordsScore + " #" + keywordsThreshold;
+        // Acoustic alternatives for Brazilian "Charles" ("Tchar-lis"). Both activate
+        // the same assistant; no speech is uploaded and no custom voice is stored.
+        // The observed CH AA1 R L IY0 sequence is primary; IH0 S is experimental.
+        if (line.startsWith("CH AA1 R L IY0 @Charles")) {
+            return "CH AA1 R L IY0" + parameters + " @Charles"
+                    + "\nCH AA1 R L IH0 S" + parameters + " @CharlesPt";
+        }
+        int label = line.indexOf(" @");
         return label < 0 ? line + parameters
                 : line.substring(0, label) + parameters + line.substring(label);
     }
