@@ -1,77 +1,87 @@
 package com.desmond.gptwake;
 
 import android.content.Context;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.vosk.Model;
 import org.vosk.Recognizer;
+import java.util.Locale;
 
-/** Local, Portuguese speech trigger. Only the exact word Charles wakes the assistant.
- * Microphone audio stays in the Android process and is never logged or uploaded. */
+/**
+ * Conservative offline Portuguese "Charles" trigger.
+ *
+ * The previous constrained grammar treated unrelated speech as "charles",
+ * and opened ChatGPT after just two partial frames (~160 ms).
+ * This revision intentionally sacrifices some recall: uses the FULL PT-BR
+ * recognizer, requires a COMPLETE speech segment, exact one-word result,
+ * and a minimum independent word confidence. Never acts on partial text.
+ * No microphone audio or unrelated transcriptions are stored/logged.
+ */
 final class VoskPtWakeEngine implements AutoCloseable {
-    private static final String GRAMMAR = "[\"charles\",\"[unk]\"]";
+    private static final double MIN_WORD_CONFIDENCE = 0.70;
     private final Model model;
     private Recognizer recognizer;
-    private String previousPartial = "";
-    private int matchingFrames = 0;
 
     static VoskPtWakeEngine load(Context context) throws Exception {
         long t = System.currentTimeMillis();
         VoskPtWakeEngine engine = new VoskPtWakeEngine(VoskPtModel.open(context));
-        L.i("VOSK_PT_LIVE_MODEL_READY elapsedMs=" + (System.currentTimeMillis() - t));
+        L.i("VOSK_PT_SAFE_MODEL_READY elapsedMs=" + (System.currentTimeMillis() - t));
         return engine;
     }
+
     private VoskPtWakeEngine(Model model) {
         this.model = model;
     }
+
     synchronized void newStream() throws Exception {
         releaseStream();
-        recognizer = new Recognizer(model, 16000f, GRAMMAR);
-        L.i("VOSK_PT_LIVE_STREAM_NEW grammar=charles_or_unknown");
+        // Do NOT use ["charles","[unk]"]; that grammar forced a false
+        // "Charles" decision for many unrelated sounds.
+        recognizer = new Recognizer(model, 16000f);
+        recognizer.setWords(true);
+        L.i("VOSK_PT_SAFE_STREAM_NEW grammar=unrestricted decision=final_only threshold=0.70");
     }
+
     synchronized String accept(float[] normalized, int sampleRate) {
         if (recognizer == null || sampleRate != 16000) return null;
         float[] pcm16 = new float[normalized.length];
         for (int i = 0; i < normalized.length; i++) pcm16[i] = normalized[i] * 32768f;
         try {
-            boolean endpoint = recognizer.acceptWaveForm(pcm16, pcm16.length);
-            String result = new JSONObject(endpoint
-                    ? recognizer.getResult() : recognizer.getPartialResult())
-                    .optString(endpoint ? "text" : "partial", "").trim();
-            if (endpoint) {
-                matchingFrames = 0;
-                previousPartial = "";
-                if ("charles".equalsIgnoreCase(result)) {
-                    L.i("VOSK_PT_FINAL_HIT keyword=Charles");
-                    return "Charles";
-                }
+            if (!recognizer.acceptWaveForm(pcm16, pcm16.length)) {
+                // Crucial: NEVER launch from a partial transcript.
                 return null;
             }
-            if ("charles".equalsIgnoreCase(result)) {
-                matchingFrames = "charles".equals(previousPartial) ? matchingFrames + 1 : 1;
-                previousPartial = "charles";
-                // Two successive 80 ms chunks reduce one-frame partial hallucinations.
-                if (matchingFrames >= 2) {
-                    L.i("VOSK_PT_PARTIAL_HIT keyword=Charles stableFrames=" + matchingFrames);
-                    matchingFrames = 0;
-                    return "Charles";
-                }
-            } else {
-                matchingFrames = 0;
-                previousPartial = result;
+            JSONObject finalResult = new JSONObject(recognizer.getResult());
+            String words = finalResult.optString("text", "").trim().toLowerCase(Locale.ROOT);
+            if (!"charles".equals(words)) return null;
+
+            JSONArray details = finalResult.optJSONArray("result");
+            if (details == null || details.length() != 1) {
+                L.i("VOSK_PT_SAFE_REJECT reason=no_single_word_confidence");
+                return null;
             }
-            return null;
+            JSONObject word = details.optJSONObject(0);
+            double confidence = word == null ? 0 : word.optDouble("conf", 0);
+            if (!Double.isFinite(confidence) || confidence < MIN_WORD_CONFIDENCE) {
+                L.i("VOSK_PT_SAFE_REJECT reason=low_confidence conf=" +
+                        String.format(Locale.US, "%.2f", confidence));
+                return null;
+            }
+            L.i("VOSK_PT_SAFE_HIT keyword=Charles conf=" +
+                    String.format(Locale.US, "%.2f", confidence));
+            return "Charles";
         } catch (Exception e) {
-            L.e("VOSK_PT_LIVE_RECOGNIZER_FAIL", e);
+            L.e("VOSK_PT_SAFE_RECOGNIZER_FAIL", e);
             return null;
         }
     }
+
     synchronized void releaseStream() {
         Recognizer r = recognizer;
         recognizer = null;
-        matchingFrames = 0;
-        previousPartial = "";
         if (r != null) r.close();
     }
+
     @Override
     public synchronized void close() {
         releaseStream();
