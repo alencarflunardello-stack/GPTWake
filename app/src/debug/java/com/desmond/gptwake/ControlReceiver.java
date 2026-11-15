@@ -209,6 +209,18 @@ public class ControlReceiver extends BroadcastReceiver {
                         + " (restart the FGS to apply)");
                 break;
             }
+            case "offline_eval": {
+                // Run asynchronously so BroadcastReceiver can finish after local inference.
+                final PendingResult pending = goAsync();
+                new Thread(() -> {
+                    try {
+                        OfflineWakeEvaluator.run(app);
+                    } finally {
+                        pending.finish();
+                    }
+                }, "charles-offline-eval").start();
+                break;
+            }
             case "wake_state": {
                 WakeController c = WakeService.controller();
                 L.i("WAKE_STATE " + (c == null ? "no-controller" : c.state())
