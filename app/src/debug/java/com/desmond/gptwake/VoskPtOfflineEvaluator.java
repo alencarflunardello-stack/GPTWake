@@ -11,11 +11,10 @@ import java.util.Locale;
 final class VoskPtOfflineEvaluator {
     private static final int FRAME = 1280; // 80 ms at 16 kHz
     private static final String[] GRAMMARS = {
-        "", 
-        "[\\"charles\\",\\"[unk]\\"]",
-        "[\\"charles\\",\\"charli\\",\\"charlie\\",\\"carlos\\",\\"[unk]\\"]"
-    };
-    private VoskPtOfflineEvaluator() {}
+        "",
+        "[\"charles\",\"[unk]\"]",
+        "[\"charles\",\"charli\",\"charlie\",\"carlos\",\"[unk]\"]",
+    };    private VoskPtOfflineEvaluator() {}
     static void run(Context ctx) {
         long start = System.currentTimeMillis();
         File recording = new File(ctx.getExternalFilesDir(null), "Charles.m4a");
