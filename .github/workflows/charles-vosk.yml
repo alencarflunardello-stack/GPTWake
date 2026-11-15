@@ -1,7 +1,7 @@
-name: Charles Vosk PT-BR on-device test
+name: Charles safe wakeword negative-control build
 on:
   push:
-    branches: [charles-vosk-ptbr]
+    branches: [charles-anti-false-trigger]
   workflow_dispatch:
 
 permissions:
@@ -43,6 +43,6 @@ jobs:
           ./gradlew --no-daemon :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: Charles-Vosk-PTBR-debug-apk
+          name: Charles-safe-PTBR-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 7
