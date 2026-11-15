@@ -32,6 +32,7 @@ public final class WakeController implements AudioProbe.WakeListener, AudioState
 
     private final Context ctx;
     private final KwsEngine kws;
+    private final WakeGreeting greeting;
     private final ScheduledExecutorService exec;
     private final AtomicBoolean started = new AtomicBoolean();
     private final AtomicBoolean stopped = new AtomicBoolean();
@@ -53,6 +54,7 @@ public final class WakeController implements AudioProbe.WakeListener, AudioState
         this.ctx = c.getApplicationContext();
         this.kws = kws;
         this.kws.attachContext(this.ctx);
+        this.greeting = new WakeGreeting(this.ctx);
         this.exec = exec;
     }
 
@@ -298,7 +300,18 @@ public final class WakeController implements AudioProbe.WakeListener, AudioState
         L.i("MIC_RELEASE_DONE elapsedMs=" + (SystemClock.elapsedRealtime() - t0)
                 + " ownConfigStillPresent=" + AudioStateMonitor.hasOwnCaptureConfig());
 
-        later(this::launchChatGpt, HANDOFF_DRAIN_MS);
+        later(this::acknowledgeThenLaunch, HANDOFF_DRAIN_MS);
+    }
+
+    /** Speak acknowledgment only after the wake microphone is released.
+     * Callback returns to the serial wake-state executor before launch.
+     */
+    private void acknowledgeThenLaunch() {
+        if (state != State.MIC_HANDOFF || stopped.get()) return;
+        L.i("CHARLES_GREETING_BEGIN");
+        greeting.speak(() -> post(() -> {
+            if (state == State.MIC_HANDOFF && !stopped.get()) launchChatGpt();
+        }));
     }
 
     private void launchChatGpt() {
@@ -443,6 +456,7 @@ public final class WakeController implements AudioProbe.WakeListener, AudioState
                 AudioProbe.bind(null, null);
                 AudioStateMonitor.clearListener(this);
                 kws.release();
+                greeting.close();
             } finally {
                 set(State.STOPPED);
             }
