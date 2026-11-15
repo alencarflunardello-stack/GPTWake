@@ -20,7 +20,15 @@ final class SafeWakeOfflineEvaluator {
             }
             float[] positive = OfflineWakeEvaluator.decodeTo16k(file);
             try (VoskPtWakeEngine engine = VoskPtWakeEngine.load(ctx)) {
-                verify(engine, "owner_four_calls", positive);
+                double[] confidenceLevels = {0.35, 0.45, 0.50, 0.55, 0.60, 0.68};
+                for (double level : confidenceLevels) {
+                    VoskPtWakeEngine.minWordConfidence = level;
+                    L.i("SAFE_SWEEP_THRESHOLD=" + level);
+                    verify(engine, "owner_four_calls", positive);
+                }
+                // Negative controls at the most permissive threshold. Any hit
+                // here rules out that threshold for unattended usage.
+                VoskPtWakeEngine.minWordConfidence = confidenceLevels[0];
                 verify(engine, "silence", new float[160000]);
                 float[] pinkishNoise = new float[160000];
                 Random random = new Random(1306L);
@@ -40,6 +48,8 @@ final class SafeWakeOfflineEvaluator {
             }
         } catch (Throwable e) {
             L.e("SAFE_OFFLINE_FAILED", e);
+        } finally {
+            VoskPtWakeEngine.minWordConfidence = 0.55;
         }
     }
     private static void verify(VoskPtWakeEngine engine, String label, float[] audio) throws Exception {
@@ -60,7 +70,7 @@ final class SafeWakeOfflineEvaluator {
             String hit = engine.accept(new float[FRAME], 16000);
             if (hit != null) hits++;
         }
-        L.i("SAFE_OFFLINE_RESULT label=" + label + " hits=" + hits
+        L.i("SAFE_OFFLINE_RESULT threshold=" + VoskPtWakeEngine.minWordConfidence + " label=" + label + " hits=" + hits
                 + " durationSec=" + String.format(Locale.US,"%.2f",audio.length / 16000.0)
                 + " hitsAtSec=" + times);
         engine.releaseStream();
