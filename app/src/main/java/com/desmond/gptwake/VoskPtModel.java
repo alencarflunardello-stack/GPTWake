@@ -17,8 +17,8 @@ final class VoskPtModel {
         if (!done.isFile()) {
             L.i("VOSK_PT_UNPACK_BEGIN dir=" + dir.getAbsolutePath());
             copyAssetTree(ctx.getAssets(), "vosk-pt", dir);
-            if (!new File(dir, "am/final.mdl").isFile()) {
-                throw new IllegalStateException("Vosk pt-BR model missing am/final.mdl");
+            if (!new File(dir, "am/final.mdl").isFile() && !new File(dir, "final.mdl").isFile()) {
+                throw new IllegalStateException("Vosk pt-BR model missing final.mdl");
             }
             if (!done.createNewFile()) throw new IllegalStateException("Vosk model marker creation failed");
             L.i("VOSK_PT_UNPACK_OK");
