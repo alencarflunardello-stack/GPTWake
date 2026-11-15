@@ -33,7 +33,7 @@ jobs:
           echo '6e1ce909032e1afa7a88e68a3d628ecafff302bdf195befab308826c395e93b7  '"$RUNNER_TEMP/vosk-pt.zip" | sha256sum -c -
           mkdir -p "$RUNNER_TEMP/vosk-unpacked"
           unzip -q "$RUNNER_TEMP/vosk-pt.zip" -d "$RUNNER_TEMP/vosk-unpacked"
-          test -f "$RUNNER_TEMP/vosk-unpacked/vosk-model-small-pt-0.3/am/final.mdl"
+          test -f "$RUNNER_TEMP/vosk-unpacked/vosk-model-small-pt-0.3/final.mdl"
           cp -a "$RUNNER_TEMP/vosk-unpacked/vosk-model-small-pt-0.3" app/src/main/assets/vosk-pt
           echo "Vosk Portuguese model verified and added to build assets."
       - uses: gradle/actions/setup-gradle@v4
