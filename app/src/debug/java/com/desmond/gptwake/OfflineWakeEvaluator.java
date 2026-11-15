@@ -96,7 +96,7 @@ public final class OfflineWakeEvaluator {
         }
     }
 
-    private static float[] decodeTo16k(File source) throws Exception {
+    static float[] decodeTo16k(File source) throws Exception {
         MediaExtractor extractor = new MediaExtractor();
         MediaCodec decoder = null;
         try {
