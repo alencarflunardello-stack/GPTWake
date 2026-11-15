@@ -209,6 +209,14 @@ public class ControlReceiver extends BroadcastReceiver {
                         + " (restart the FGS to apply)");
                 break;
             }
+            case "safe_offline_eval": {
+                final PendingResult pendingSafe = goAsync();
+                new Thread(() -> {
+                    try { SafeWakeOfflineEvaluator.run(app); }
+                    finally { pendingSafe.finish(); }
+                }, "charles-safe-offline-eval").start();
+                break;
+            }
             case "vosk_pt_eval": {
                 final PendingResult pendingVosk = goAsync();
                 new Thread(() -> {
