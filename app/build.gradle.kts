@@ -42,8 +42,8 @@ android {
         applicationId = "com.alencar.charleswake"
         minSdk = 32
         targetSdk = 36
-        versionCode = 5
-        versionName = "1.3.0-charles-vosk"
+        versionCode = 6
+        versionName = "1.4.0-charles-voz-saudacao"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters += "arm64-v8a"
