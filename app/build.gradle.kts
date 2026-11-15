@@ -42,8 +42,8 @@ android {
         applicationId = "com.alencar.charleswake"
         minSdk = 32
         targetSdk = 36
-        versionCode = 4
-        versionName = "1.2.0-charles-debug"
+        versionCode = 5
+        versionName = "1.3.0-charles-vosk"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters += "arm64-v8a"
@@ -121,6 +121,7 @@ dependencies {
     // The Kotlin Gradle plugin supplies kotlin-stdlib; pinning it here would risk a
     // version skew against the compiler.
     implementation(files("libs/sherpa-onnx-1.13.4-classes.jar"))
+    implementation("com.alphacephei:vosk-android:0.3.75")
     // Offline Japanese kanji readings; includes the IPADIC dictionary in the APK.
     implementation("com.atilika.kuromoji:kuromoji-ipadic:0.9.0")
 
