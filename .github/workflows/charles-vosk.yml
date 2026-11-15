@@ -1,0 +1,48 @@
+name: Charles Vosk PT-BR on-device test
+on:
+  push:
+    branches: [charles-vosk-ptbr]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v4
+        with:
+          packages: 'platform-tools'
+      - name: Install Android SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager --channel=3 'platforms;android-37.0' 'build-tools;37.0.0'
+      - name: Download and integrity-check Portuguese Vosk model (Apache-2.0)
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL --retry 3 --connect-timeout 20 --max-time 240 -o "$RUNNER_TEMP/vosk-pt.zip" \
+            'https://alphacephei.com/vosk/models/vosk-model-small-pt-0.3.zip'
+          echo '6e1ce909032e1afa7a88e68a3d628ecafff302bdf195befab308826c395e93b7  '"$RUNNER_TEMP/vosk-pt.zip" | sha256sum -c -
+          mkdir -p "$RUNNER_TEMP/vosk-unpacked"
+          unzip -q "$RUNNER_TEMP/vosk-pt.zip" -d "$RUNNER_TEMP/vosk-unpacked"
+          test -f "$RUNNER_TEMP/vosk-unpacked/vosk-model-small-pt-0.3/am/final.mdl"
+          cp -a "$RUNNER_TEMP/vosk-unpacked/vosk-model-small-pt-0.3" app/src/main/assets/vosk-pt
+          echo "Vosk Portuguese model verified and added to build assets."
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Compile debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon :app:assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Charles-Vosk-PTBR-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 7
