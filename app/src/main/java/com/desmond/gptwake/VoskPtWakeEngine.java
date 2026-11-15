@@ -18,7 +18,7 @@ import java.util.Locale;
  * No microphone audio or unrelated transcriptions are stored/logged.
  */
 final class VoskPtWakeEngine implements AutoCloseable {
-    private static final double MIN_WORD_CONFIDENCE = 0.70;
+    private static final double MIN_WORD_CONFIDENCE = 0.68;
     private final Model model;
     private Recognizer recognizer;
 
@@ -39,7 +39,7 @@ final class VoskPtWakeEngine implements AutoCloseable {
         // "Charles" decision for many unrelated sounds.
         recognizer = new Recognizer(model, 16000f);
         recognizer.setWords(true);
-        L.i("VOSK_PT_SAFE_STREAM_NEW grammar=unrestricted decision=final_only threshold=0.70");
+        L.i("VOSK_PT_SAFE_STREAM_NEW grammar=unrestricted decision=final_only threshold=0.68");
     }
 
     synchronized String accept(float[] normalized, int sampleRate) {
