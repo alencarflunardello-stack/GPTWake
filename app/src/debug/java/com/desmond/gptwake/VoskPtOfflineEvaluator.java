@@ -14,6 +14,9 @@ final class VoskPtOfflineEvaluator {
         "",
         "[\"charles\",\"[unk]\"]",
         "[\"charles\",\"charli\",\"charlie\",\"carlos\",\"[unk]\"]",
+        "[\"charles\",\"eles\",\"[unk]\"]",
+        "[\"charles\",\"eles\",\"chaves\",\"alice\",\"tchau\",\"[unk]\"]",
+        "[\"charles\",\"chale\",\"eles\",\"[unk]\"]",
     };    private VoskPtOfflineEvaluator() {}
     static void run(Context ctx) {
         long start = System.currentTimeMillis();
