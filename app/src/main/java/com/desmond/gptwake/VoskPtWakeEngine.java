@@ -18,7 +18,7 @@ import java.util.Locale;
  * No microphone audio or unrelated transcriptions are stored/logged.
  */
 final class VoskPtWakeEngine implements AutoCloseable {
-    private static final double MIN_WORD_CONFIDENCE = 0.55;
+    static volatile double minWordConfidence = 0.55;
     private final Model model;
     private Recognizer recognizer;
 
@@ -71,7 +71,7 @@ final class VoskPtWakeEngine implements AutoCloseable {
                 return null;
             }
             double confidence = word.optDouble("conf", 0);
-            if (!Double.isFinite(confidence) || confidence < MIN_WORD_CONFIDENCE) {
+            if (!Double.isFinite(confidence) || confidence < minWordConfidence) {
                 L.i("VOSK_PT_SAFE_REJECT reason=low_confidence conf=" +
                         String.format(Locale.US, "%.2f", confidence));
                 return null;
