@@ -39,7 +39,9 @@ final class VoskPtOfflineEvaluator {
                         for (int offset = 0; offset < audio.length; offset += FRAME) {
                             int n = Math.min(FRAME, audio.length - offset);
                             float[] buf = new float[n];
-                            System.arraycopy(audio, offset, buf, 0, n);
+                            // Vosk float API expects the numerical scale of PCM16
+                            // (-32768..32767), not [-1..1] normalized waveform.
+                            for (int j = 0; j < n; j++) buf[j] = audio[offset + j] * 32768f;
                             if (rec.acceptWaveForm(buf, n)) {
                                 String text = new JSONObject(rec.getResult()).optString("text", "").trim();
                                 if (!text.isEmpty()) {
