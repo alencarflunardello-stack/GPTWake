@@ -52,6 +52,7 @@ public final class WakeController implements AudioProbe.WakeListener, AudioState
     WakeController(Context c, KwsEngine kws, ScheduledExecutorService exec) {
         this.ctx = c.getApplicationContext();
         this.kws = kws;
+        this.kws.attachContext(this.ctx);
         this.exec = exec;
     }
 
