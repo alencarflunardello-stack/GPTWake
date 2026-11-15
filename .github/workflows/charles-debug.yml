@@ -18,7 +18,8 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
-      - uses: android-actions/setup-android@v3
+      # GitHub ubuntu-latest already provides ANDROID_HOME/sdkmanager.
+      # The setup-android action currently fails while requesting removed package 'tools'.
       - name: Install Android 37 preview SDK
         shell: bash
         run: |
