@@ -39,11 +39,11 @@ android {
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "com.desmond.gptwake"
+        applicationId = "com.alencar.charleswake"
         minSdk = 32
         targetSdk = 36
-        versionCode = 3
-        versionName = "1.1.0"
+        versionCode = 4
+        versionName = "1.2.0-charles-debug"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         ndk {
             abiFilters += "arm64-v8a"
