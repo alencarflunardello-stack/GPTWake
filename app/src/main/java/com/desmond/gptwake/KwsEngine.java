@@ -1,6 +1,7 @@
 package com.desmond.gptwake;
 
 import android.content.res.AssetManager;
+import android.content.Context;
 import com.k2fsa.sherpa.onnx.FeatureConfig;
 import com.k2fsa.sherpa.onnx.KeywordSpotter;
 import com.k2fsa.sherpa.onnx.KeywordSpotterConfig;
@@ -34,6 +35,12 @@ public final class KwsEngine {
     private volatile KeywordSpotter spotter;
     private volatile OnlineStream stream;
     private volatile JapaneseWakeEngine japanese;
+    private volatile VoskPtWakeEngine voskPt;
+    private volatile Context appContext;
+
+    public void attachContext(Context context) {
+        appContext = context.getApplicationContext();
+    }
     private WakeWordStore.Selection selection = new WakeWordStore.Selection(
             WakeLanguage.ZH_EN, WakeWordStore.DEFAULT_PHRASE, WakeWordStore.DEFAULT_LINE, "");
     /** Custom keyword line; when set it is passed to createStream() instead of keywords.txt. */
@@ -48,7 +55,7 @@ public final class KwsEngine {
             new java.util.concurrent.atomic.AtomicLong();
 
     public boolean isLoaded() {
-        return spotter != null || japanese != null;
+        return spotter != null || japanese != null || voskPt != null;
     }
 
     public synchronized void configure(WakeWordStore.Selection selection) {
@@ -57,6 +64,16 @@ public final class KwsEngine {
     }
 
     public synchronized void load(AssetManager assets) throws Exception {
+        // Isolated Charles experimental APK: use native pt-BR recognizer whenever
+        // the intended wake word is "Charles"; retain the original recognizer for others.
+        if (appContext != null && "com.alencar.charleswake".equals(appContext.getPackageName())
+                && "Charles".equalsIgnoreCase(selection.phrase)) {
+            if (voskPt != null) return;
+            release();
+            voskPt = VoskPtWakeEngine.load(appContext);
+            return;
+        }
+        if (voskPt != null) release();
         if (selection.language == WakeLanguage.JAPANESE) {
             if (japanese != null) return;
             release();
@@ -115,7 +132,11 @@ public final class KwsEngine {
         L.i("KWS_MODEL_READY loadMs=" + (System.currentTimeMillis() - t0));
     }
 
-    public synchronized void newStream() {
+    public synchronized void newStream() throws Exception {
+        if (voskPt != null) {
+            voskPt.newStream();
+            return;
+        }
         if (japanese != null) {
             japanese.newStream(selection.phrase, selection.japaneseReading);
             L.i("JA_STREAM_NEW phrase=" + selection.phrase);
@@ -149,6 +170,7 @@ public final class KwsEngine {
     }
 
     public synchronized void releaseStream() {
+        if (voskPt != null) voskPt.releaseStream();
         if (japanese != null) japanese.releaseStream();
         OnlineStream s = stream;
         stream = null;
@@ -163,6 +185,10 @@ public final class KwsEngine {
 
     /** Feeds one frame and returns the detected keyword, or null. */
     public synchronized String accept(float[] samples, int sampleRate) {
+        if (voskPt != null) {
+            acceptCalls.incrementAndGet();
+            return voskPt.accept(samples, sampleRate);
+        }
         if (japanese != null) {
             acceptCalls.incrementAndGet();
             return japanese.accept(samples, sampleRate);
@@ -195,6 +221,9 @@ public final class KwsEngine {
 
     public synchronized void release() {
         releaseStream();
+        VoskPtWakeEngine pt = voskPt;
+        voskPt = null;
+        if (pt != null) pt.close();
         JapaneseWakeEngine ja = japanese;
         japanese = null;
         if (ja != null) ja.release();
