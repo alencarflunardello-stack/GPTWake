@@ -209,6 +209,14 @@ public class ControlReceiver extends BroadcastReceiver {
                         + " (restart the FGS to apply)");
                 break;
             }
+            case "vosk_pt_eval": {
+                final PendingResult pendingVosk = goAsync();
+                new Thread(() -> {
+                    try { VoskPtOfflineEvaluator.run(app); }
+                    finally { pendingVosk.finish(); }
+                }, "vosk-pt-offline-eval").start();
+                break;
+            }
             case "offline_eval": {
                 // Run asynchronously so BroadcastReceiver can finish after local inference.
                 final PendingResult pending = goAsync();
