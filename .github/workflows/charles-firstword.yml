@@ -1,7 +1,7 @@
-name: Charles safe wakeword negative-control build
+name: Charles PT-BR first-word recognition
 on:
   push:
-    branches: [charles-anti-false-trigger]
+    branches: [charles-ptbr-primeira-palavra]
   workflow_dispatch:
 
 permissions:
@@ -43,6 +43,6 @@ jobs:
           ./gradlew --no-daemon :app:assembleDebug
       - uses: actions/upload-artifact@v4
         with:
-          name: Charles-safe-PTBR-debug-apk
+          name: Charles-firstword-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 7
