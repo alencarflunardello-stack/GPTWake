@@ -18,7 +18,7 @@ import java.util.Locale;
  * No microphone audio or unrelated transcriptions are stored/logged.
  */
 final class VoskPtWakeEngine implements AutoCloseable {
-    static volatile double minWordConfidence = 0.55;
+    static volatile double minWordConfidence = 0.68;
     private final Model model;
     private Recognizer recognizer;
 
@@ -35,13 +35,10 @@ final class VoskPtWakeEngine implements AutoCloseable {
 
     synchronized void newStream() throws Exception {
         releaseStream();
-        // Calibrated Portuguese grammar. Competing common lookalike words
-        // prevent forcing unrelated speech into "charles" (unlike the unsafe
-        // two-token [charles,unk] grammar). Only FIRST word in a FINAL segment
-        // with sufficient word confidence can trigger the assistant.
-        recognizer = new Recognizer(model, 16000f, "[\"charles\",\"eles\",\"chaves\",\"alice\",\"tchau\",\"[unk]\"]");
+        // Unrestricted PT-BR decoding: never force arbitrary speech into the name.
+        recognizer = new Recognizer(model, 16000f);
         recognizer.setWords(true);
-        L.i("VOSK_PT_SAFE_STREAM_NEW grammar=calibrated_competitors decision=final_only threshold=0.55 first_word");
+        L.i("VOSK_PT_SAFE_STREAM_NEW grammar=unrestricted decision=final_only threshold=0.68 exact_word");
     }
 
     synchronized String accept(float[] normalized, int sampleRate) {
@@ -55,16 +52,12 @@ final class VoskPtWakeEngine implements AutoCloseable {
             }
             JSONObject finalResult = new JSONObject(recognizer.getResult());
             String words = finalResult.optString("text", "").trim().toLowerCase(Locale.ROOT);
-            // Wake phrase may be followed by an immediate request, e.g.
-            // "Charles, envia oi para o Higor". Only the FIRST word counts.
-            // Do not trigger if "Charles" appears later in someone else's speech.
-            if (words.isEmpty()) return null;
-            String first = words.split("\\s+", 2)[0];
-            if (!"charles".equals(first)) return null;
+            // Accept a separate, complete invocation only. No first-word or partial matches.
+            if (!"charles".equals(words)) return null;
 
             JSONArray details = finalResult.optJSONArray("result");
-            if (details == null || details.length() < 1) {
-                L.i("VOSK_PT_SAFE_REJECT reason=no_first_word_confidence");
+            if (details == null || details.length() != 1) {
+                L.i("VOSK_PT_SAFE_REJECT reason=no_single_word_confidence");
                 return null;
             }
             JSONObject word = details.optJSONObject(0);

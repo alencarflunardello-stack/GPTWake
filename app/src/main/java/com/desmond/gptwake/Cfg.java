@@ -1,10 +1,10 @@
 package com.desmond.gptwake;
 
-/** Runtime switches for the measurement campaign. All default to the production behaviour. */
+/** Runtime switches for the measurement campaign. Safe pilot defaults to test-only until explicitly armed. */
 public final class Cfg {
 
     /** KWS hits are logged but never hand off to ChatGPT. For recall / false-activation runs. */
-    public static volatile boolean evalMode = false;
+    public static volatile boolean evalMode = true;
 
     /**
      * Power baseline A: capture, PCM conversion, RMS and statistics run exactly as in the full
@@ -13,7 +13,7 @@ public final class Cfg {
     public static volatile boolean micOnly = false;
 
     /** Duplicate-hit suppression window, also the eval-mode refractory period. */
-    public static volatile long refractoryMs = 2000;
+    public static volatile long refractoryMs = 5000;
 
     /** Periodic power / memory sampling. */
     public static volatile boolean powerLog = false;

@@ -300,18 +300,7 @@ public final class WakeController implements AudioProbe.WakeListener, AudioState
         L.i("MIC_RELEASE_DONE elapsedMs=" + (SystemClock.elapsedRealtime() - t0)
                 + " ownConfigStillPresent=" + AudioStateMonitor.hasOwnCaptureConfig());
 
-        later(this::acknowledgeThenLaunch, HANDOFF_DRAIN_MS);
-    }
-
-    /** Speak acknowledgment only after the wake microphone is released.
-     * Callback returns to the serial wake-state executor before launch.
-     */
-    private void acknowledgeThenLaunch() {
-        if (state != State.MIC_HANDOFF || stopped.get()) return;
-        L.i("CHARLES_GREETING_BEGIN");
-        greeting.speak(() -> post(() -> {
-            if (state == State.MIC_HANDOFF && !stopped.get()) launchChatGpt();
-        }));
+        later(this::launchChatGpt, HANDOFF_DRAIN_MS);
     }
 
     private void launchChatGpt() {
